@@ -20,6 +20,12 @@ export class Organization {
   @Property()
   name: string;
 
+  @Property({ unique: true })
+  subdomain: string;
+
+  @Property({ nullable: true })
+  customDomain?: string;
+
   @Property({ nullable: true })
   description?: string;
 
@@ -31,6 +37,9 @@ export class Organization {
 
   @Property({ default: true })
   isActive: boolean = true;
+
+  @Property({ default: true })
+  isPublic: boolean = true;
 
   @Property()
   createdAt: Date = new Date();

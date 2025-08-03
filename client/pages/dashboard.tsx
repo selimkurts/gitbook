@@ -127,12 +127,20 @@ export default function Dashboard() {
 									Manage your documentation and track performance
 								</p>
 							</div>
-							<Link 
-								href="/editor"
-								className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium inline-block"
-							>
-								+ New Document
-							</Link>
+							<div className="flex space-x-3">
+								<Link 
+									href="/organizations"
+									className="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-lg font-medium inline-block"
+								>
+									Organizations
+								</Link>
+								<Link 
+									href="/editor"
+									className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium inline-block"
+								>
+									+ New Document
+								</Link>
+							</div>
 						</div>
 					</div>
 
