@@ -49,7 +49,7 @@ export default function Organizations() {
 		try {
 			setIsLoading(true)
 			const token = localStorage.getItem('accessToken')
-			const response = await fetch('http://localhost:3001/organizations', {
+			const response = await fetch('/api/organizations', {
 				headers: {
 					'Authorization': `Bearer ${token}`,
 					'Content-Type': 'application/json',
@@ -85,7 +85,7 @@ export default function Organizations() {
 
 		try {
 			const token = localStorage.getItem('accessToken')
-			const response = await fetch('http://localhost:3001/organizations', {
+			const response = await fetch('/api/organizations', {
 				method: 'POST',
 				headers: {
 					'Authorization': `Bearer ${token}`,

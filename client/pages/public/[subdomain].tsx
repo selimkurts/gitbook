@@ -226,7 +226,7 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
 	const { subdomain } = context.params as { subdomain: string }
 
 	try {
-		const response = await fetch(`http://localhost:3001/organizations/public/subdomain/${subdomain}`)
+		const response = await fetch(`/api/organizations/public/subdomain/${subdomain}`)
 		
 		if (!response.ok) {
 			if (response.status === 404) {
