@@ -16,10 +16,18 @@ interface Organization {
 	updatedAt: string
 }
 
+interface OrganizationMembership {
+	id: string
+	role: 'owner' | 'admin' | 'editor' | 'viewer'
+	joinedAt: string
+	isActive: boolean
+	organization: Organization
+}
+
 export default function Organizations() {
 	const { user, isAuthenticated } = useAuth()
 	const router = useRouter()
-	const [organizations, setOrganizations] = useState<Organization[]>([])
+	const [organizations, setOrganizations] = useState<OrganizationMembership[]>([])
 	const [isLoading, setIsLoading] = useState(true)
 	const [error, setError] = useState('')
 	const [showCreateForm, setShowCreateForm] = useState(false)
@@ -49,7 +57,7 @@ export default function Organizations() {
 		try {
 			setIsLoading(true)
 			const token = localStorage.getItem('accessToken')
-			const response = await fetch('/api/organizations', {
+			const response = await fetch('/api/organizations/my-organizations', {
 				headers: {
 					'Authorization': `Bearer ${token}`,
 					'Content-Type': 'application/json',
@@ -85,7 +93,7 @@ export default function Organizations() {
 
 		try {
 			const token = localStorage.getItem('accessToken')
-			const response = await fetch('/api/organizations', {
+			const response = await fetch('/api/organizations/create-with-owner', {
 				method: 'POST',
 				headers: {
 					'Authorization': `Bearer ${token}`,
@@ -204,43 +212,73 @@ export default function Organizations() {
 					) : (
 						<div className="bg-white shadow overflow-hidden sm:rounded-md">
 							<ul className="divide-y divide-gray-200">
-								{organizations.map((org) => (
-									<li key={org.id}>
+								{organizations.map((membership) => (
+									<li key={membership.id}>
 										<div className="px-4 py-4 sm:px-6">
 											<div className="flex items-center justify-between">
 												<div className="flex-1">
 													<div className="flex items-center">
 														<p className="text-lg font-medium text-blue-600 truncate">
-															{org.name}
+															{membership.organization.name}
 														</p>
 														<span className={`ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-															org.isPublic ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
+															membership.organization.isPublic ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
 														}`}>
-															{org.isPublic ? 'Public' : 'Private'}
+															{membership.organization.isPublic ? 'Public' : 'Private'}
+														</span>
+														<span className={`ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+															membership.role === 'owner' ? 'bg-purple-100 text-purple-800' :
+															membership.role === 'admin' ? 'bg-red-100 text-red-800' :
+															membership.role === 'editor' ? 'bg-blue-100 text-blue-800' :
+															'bg-gray-100 text-gray-800'
+														}`}>
+															{membership.role.charAt(0).toUpperCase() + membership.role.slice(1)}
 														</span>
 													</div>
 													<div className="mt-2 sm:flex sm:justify-between">
-														<div className="sm:flex">
+														<div className="sm:flex sm:space-x-4">
 															<p className="flex items-center text-sm text-gray-500">
 																<span className="font-medium">Subdomain:</span>
 																<a 
-																	href={`http://${org.subdomain}.localhost:3000`}
+																	href={`http://${membership.organization.subdomain}.docflow.local`}
 																	target="_blank"
 																	rel="noopener noreferrer"
 																	className="ml-1 text-blue-600 hover:text-blue-800"
 																>
-																	{org.subdomain}.docflow.com
+																	{membership.organization.subdomain}.docflow.local
 																</a>
+															</p>
+															<p className="flex items-center text-sm text-gray-500 mt-2 sm:mt-0">
+																<span className="font-medium">Role:</span>
+																<span className="ml-1">{membership.role}</span>
 															</p>
 														</div>
 														<div className="mt-2 flex items-center text-sm text-gray-500 sm:mt-0">
-															<time dateTime={org.createdAt}>
-																Created {new Date(org.createdAt).toLocaleDateString()}
+															<time dateTime={membership.organization.createdAt}>
+																Created {new Date(membership.organization.createdAt).toLocaleDateString()}
 															</time>
 														</div>
 													</div>
-													{org.description && (
-														<p className="mt-2 text-sm text-gray-600">{org.description}</p>
+													{membership.organization.description && (
+														<p className="mt-2 text-sm text-gray-600">{membership.organization.description}</p>
+													)}
+													
+													{/* Management Actions for Owners/Admins */}
+													{(membership.role === 'owner' || membership.role === 'admin') && (
+														<div className="mt-4 flex space-x-3">
+															<Link 
+																href={`/organizations/${membership.organization.id}/members`}
+																className="text-sm text-blue-600 hover:text-blue-800"
+															>
+																Manage Members
+															</Link>
+															<Link 
+																href={`/organizations/${membership.organization.id}/documents`}
+																className="text-sm text-blue-600 hover:text-blue-800"
+															>
+																Manage Documents
+															</Link>
+														</div>
 													)}
 												</div>
 											</div>
@@ -290,7 +328,7 @@ export default function Organizations() {
 												placeholder="acme"
 											/>
 											<span className="inline-flex items-center px-3 border border-l-0 border-gray-300 bg-gray-50 text-gray-500 rounded-r-md">
-												.docflow.com
+												.docflow.local
 											</span>
 										</div>
 									</div>

@@ -8,6 +8,7 @@ import {
 import { v4 } from 'uuid';
 import { User } from '../../users/entities/user.entity';
 import { Document } from '../../documents/entities/document.entity';
+import { OrganizationMember } from './organization-member.entity';
 
 /**
  * Organization entity representing companies or teams
@@ -52,4 +53,7 @@ export class Organization {
 
   @OneToMany(() => Document, (document) => document.organization)
   documents = new Collection<Document>(this);
+
+  @OneToMany(() => OrganizationMember, (member) => member.organization)
+  members = new Collection<OrganizationMember>(this);
 }

@@ -1,7 +1,9 @@
-import { Injectable, ConflictException, NotFoundException } from '@nestjs/common';
+import { Injectable, ConflictException, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { EntityManager, EntityRepository } from '@mikro-orm/core';
 import { InjectRepository } from '@mikro-orm/nestjs';
 import { Organization } from './entities/organization.entity';
+import { OrganizationMember, MemberRole } from './entities/organization-member.entity';
+import { User } from '../users/entities/user.entity';
 import { CreateOrganizationDto, UpdateOrganizationDto } from './models/organization.dto';
 
 /**
@@ -12,6 +14,8 @@ export class OrganizationsService {
   constructor(
     @InjectRepository(Organization)
     private readonly organizationRepository: EntityRepository<Organization>,
+    @InjectRepository(OrganizationMember)
+    private readonly memberRepository: EntityRepository<OrganizationMember>,
     private readonly em: EntityManager,
   ) {}
 
@@ -176,5 +180,159 @@ export class OrganizationsService {
           updatedAt: doc.updatedAt,
         })),
     };
+  }
+
+  /**
+   * Add a member to organization
+   */
+  async addMember(organizationId: string, userId: string, role: MemberRole = MemberRole.VIEWER, currentUserId: string): Promise<OrganizationMember> {
+    // Check if current user has permission to add members
+    await this.checkMemberPermission(organizationId, currentUserId, [MemberRole.OWNER, MemberRole.ADMIN]);
+
+    const organization = await this.findById(organizationId);
+    const user = await this.em.findOne(User, { id: userId });
+    
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    // Check if user is already a member
+    const existingMember = await this.memberRepository.findOne({ 
+      user: { id: userId }, 
+      organization: { id: organizationId },
+      isActive: true 
+    });
+
+    if (existingMember) {
+      throw new ConflictException('User is already a member of this organization');
+    }
+
+    const member = new OrganizationMember(user, organization, role);
+    await this.em.persistAndFlush(member);
+
+    return member;
+  }
+
+  /**
+   * Update member role
+   */
+  async updateMemberRole(organizationId: string, memberId: string, newRole: MemberRole, currentUserId: string): Promise<OrganizationMember> {
+    // Check if current user has permission to update roles
+    await this.checkMemberPermission(organizationId, currentUserId, [MemberRole.OWNER, MemberRole.ADMIN]);
+
+    const member = await this.memberRepository.findOne({ 
+      id: memberId, 
+      organization: { id: organizationId },
+      isActive: true 
+    });
+
+    if (!member) {
+      throw new NotFoundException('Member not found');
+    }
+
+    member.role = newRole;
+    await this.em.persistAndFlush(member);
+
+    return member;
+  }
+
+  /**
+   * Remove member from organization
+   */
+  async removeMember(organizationId: string, memberId: string, currentUserId: string): Promise<void> {
+    // Check if current user has permission to remove members
+    await this.checkMemberPermission(organizationId, currentUserId, [MemberRole.OWNER, MemberRole.ADMIN]);
+
+    const member = await this.memberRepository.findOne({ 
+      id: memberId, 
+      organization: { id: organizationId },
+      isActive: true 
+    });
+
+    if (!member) {
+      throw new NotFoundException('Member not found');
+    }
+
+    // Don't allow removing the owner
+    if (member.role === MemberRole.OWNER) {
+      throw new ForbiddenException('Cannot remove organization owner');
+    }
+
+    member.isActive = false;
+    await this.em.persistAndFlush(member);
+  }
+
+  /**
+   * Get organization members
+   */
+  async getMembers(organizationId: string, currentUserId: string): Promise<OrganizationMember[]> {
+    // Check if current user is a member of the organization
+    await this.checkMemberPermission(organizationId, currentUserId, [MemberRole.OWNER, MemberRole.ADMIN, MemberRole.EDITOR, MemberRole.VIEWER]);
+
+    return this.memberRepository.find({ 
+      organization: { id: organizationId },
+      isActive: true 
+    }, { 
+      populate: ['user']
+    });
+  }
+
+  /**
+   * Get user's organizations with their roles
+   */
+  async getUserOrganizations(userId: string): Promise<OrganizationMember[]> {
+    return this.memberRepository.find({ 
+      user: { id: userId },
+      isActive: true 
+    }, { 
+      populate: ['organization']
+    });
+  }
+
+  /**
+   * Check if user has required permission in organization
+   */
+  async checkMemberPermission(organizationId: string, userId: string, requiredRoles: MemberRole[]): Promise<void> {
+    const member = await this.memberRepository.findOne({ 
+      user: { id: userId }, 
+      organization: { id: organizationId },
+      isActive: true 
+    });
+
+    if (!member || !requiredRoles.includes(member.role)) {
+      throw new ForbiddenException('Insufficient permissions');
+    }
+  }
+
+  /**
+   * Get user's role in organization
+   */
+  async getUserRole(organizationId: string, userId: string): Promise<MemberRole | null> {
+    const member = await this.memberRepository.findOne({ 
+      user: { id: userId }, 
+      organization: { id: organizationId },
+      isActive: true 
+    });
+
+    return member?.role || null;
+  }
+
+  /**
+   * Create organization with owner
+   */
+  async createOrganizationWithOwner(createOrganizationDto: CreateOrganizationDto, ownerId: string): Promise<{ organization: Organization, membership: OrganizationMember }> {
+    // First create the organization
+    const organization = await this.createOrganization(createOrganizationDto);
+    
+    // Then add the creator as owner
+    const owner = await this.em.findOne(User, { id: ownerId });
+    if (!owner) {
+      throw new NotFoundException('Owner user not found');
+    }
+
+    const membership = new OrganizationMember(owner, organization, MemberRole.OWNER);
+    await this.em.persistAndFlush(membership);
+
+    return { organization, membership };
   }
 }

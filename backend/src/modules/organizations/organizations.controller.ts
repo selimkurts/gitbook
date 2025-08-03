@@ -12,11 +12,12 @@ import {
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { OrganizationsService } from './organizations.service';
+import { MemberRole } from './entities/organization-member.entity';
 import { 
   CreateOrganizationDto, 
   UpdateOrganizationDto, 
   OrganizationResponseDto,
-  PublicOrganizationDto 
+  PublicOrganizationDto
 } from './models/organization.dto';
 import { JwtAuthGuard } from '../../core/guards/jwt-auth.guard';
 import { CurrentUser } from '../../core/decorators/current-user.decorator';
@@ -30,6 +31,22 @@ import { SubdomainRequest } from '../../core/middleware/subdomain.middleware';
 @Controller('organizations')
 export class OrganizationsController {
   constructor(private readonly organizationsService: OrganizationsService) {}
+
+  /**
+   * Create organization with current user as owner
+   */
+  @Post('create-with-owner')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Create organization with current user as owner' })
+  @ApiResponse({ status: 201, description: 'Organization created successfully' })
+  @ApiResponse({ status: 409, description: 'Subdomain already exists' })
+  async createOrganizationWithOwner(
+    @Body() createOrganizationDto: CreateOrganizationDto,
+    @CurrentUser() currentUser: User,
+  ) {
+    return this.organizationsService.createOrganizationWithOwner(createOrganizationDto, currentUser.id);
+  }
 
   /**
    * Create a new organization
@@ -46,6 +63,18 @@ export class OrganizationsController {
   ): Promise<OrganizationResponseDto> {
     const organization = await this.organizationsService.createOrganization(createOrganizationDto);
     return organization;
+  }
+
+  /**
+   * Get user's organizations with roles
+   */
+  @Get('my-organizations')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Get current user organizations' })
+  @ApiResponse({ status: 200, description: 'User organizations retrieved successfully' })
+  async getUserOrganizations(@CurrentUser() currentUser: User) {
+    return this.organizationsService.getUserOrganizations(currentUser.id);
   }
 
   /**
@@ -180,4 +209,89 @@ export class SubdomainController {
       document,
     };
   }
+
+  /**
+   * Add member to organization
+   */
+  @Post(':id/members')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Add member to organization' })
+  @ApiResponse({ status: 201, description: 'Member added successfully' })
+  @ApiResponse({ status: 403, description: 'Insufficient permissions' })
+  @ApiResponse({ status: 404, description: 'User or organization not found' })
+  @ApiResponse({ status: 409, description: 'User is already a member' })
+  async addMember(
+    @Param('id') organizationId: string,
+    @Body() body: { userId: string; role?: MemberRole },
+    @CurrentUser() currentUser: User,
+  ) {
+    return this.organizationsService.addMember(
+      organizationId, 
+      body.userId, 
+      body.role || MemberRole.VIEWER, 
+      currentUser.id
+    );
+  }
+
+  /**
+   * Update member role
+   */
+  @Put(':id/members/:memberId')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Update member role' })
+  @ApiResponse({ status: 200, description: 'Member role updated successfully' })
+  @ApiResponse({ status: 403, description: 'Insufficient permissions' })
+  @ApiResponse({ status: 404, description: 'Member not found' })
+  async updateMemberRole(
+    @Param('id') organizationId: string,
+    @Param('memberId') memberId: string,
+    @Body() body: { role: MemberRole },
+    @CurrentUser() currentUser: User,
+  ) {
+    return this.organizationsService.updateMemberRole(
+      organizationId, 
+      memberId, 
+      body.role, 
+      currentUser.id
+    );
+  }
+
+  /**
+   * Remove member from organization
+   */
+  @Delete(':id/members/:memberId')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Remove member from organization' })
+  @ApiResponse({ status: 200, description: 'Member removed successfully' })
+  @ApiResponse({ status: 403, description: 'Insufficient permissions' })
+  @ApiResponse({ status: 404, description: 'Member not found' })
+  async removeMember(
+    @Param('id') organizationId: string,
+    @Param('memberId') memberId: string,
+    @CurrentUser() currentUser: User,
+  ) {
+    await this.organizationsService.removeMember(organizationId, memberId, currentUser.id);
+    return { message: 'Member removed successfully' };
+  }
+
+  /**
+   * Get organization members
+   */
+  @Get(':id/members')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Get organization members' })
+  @ApiResponse({ status: 200, description: 'Members retrieved successfully' })
+  @ApiResponse({ status: 403, description: 'Insufficient permissions' })
+  @ApiResponse({ status: 404, description: 'Organization not found' })
+  async getMembers(
+    @Param('id') organizationId: string,
+    @CurrentUser() currentUser: User,
+  ) {
+    return this.organizationsService.getMembers(organizationId, currentUser.id);
+  }
+
 }

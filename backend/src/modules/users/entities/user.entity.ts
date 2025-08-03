@@ -11,6 +11,7 @@ import { v4 } from 'uuid';
 import { UserRole } from '../../../shared/types/user.types';
 import { Document } from '../../documents/entities/document.entity';
 import { Organization } from '../../organizations/entities/organization.entity';
+import { OrganizationMember } from '../../organizations/entities/organization-member.entity';
 
 /**
  * User entity representing system users
@@ -55,6 +56,9 @@ export class User {
 
   @OneToMany(() => Document, (document) => document.author)
   documents = new Collection<Document>(this);
+
+  @OneToMany(() => OrganizationMember, (member) => member.user)
+  organizationMemberships = new Collection<OrganizationMember>(this);
 
   /**
    * Get user's full name
