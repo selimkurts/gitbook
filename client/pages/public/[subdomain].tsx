@@ -226,7 +226,9 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
 	const { subdomain } = context.params as { subdomain: string }
 
 	try {
-		const response = await fetch(`/api/organizations/public/subdomain/${subdomain}`)
+		// Server-side rendering için absolute URL kullanıyoruz
+		const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://backend:3001'
+		const response = await fetch(`${apiUrl}/organizations/public/subdomain/${subdomain}`)
 		
 		if (!response.ok) {
 			if (response.status === 404) {

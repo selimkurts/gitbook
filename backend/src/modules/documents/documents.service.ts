@@ -7,6 +7,8 @@ import { InjectRepository } from '@mikro-orm/nestjs';
 import { EntityRepository, EntityManager } from '@mikro-orm/core';
 import { Document } from './entities/document.entity';
 import { User } from '../users/entities/user.entity';
+import { Organization } from '../organizations/entities/organization.entity';
+import { OrganizationMember, MemberRole } from '../organizations/entities/organization-member.entity';
 import {
   CreateDocumentDto,
   UpdateDocumentDto,
@@ -21,6 +23,8 @@ export class DocumentsService {
   constructor(
     @InjectRepository(Document)
     private readonly documentRepository: EntityRepository<Document>,
+    @InjectRepository(OrganizationMember)
+    private readonly memberRepository: EntityRepository<OrganizationMember>,
     private readonly em: EntityManager,
   ) {}
 
@@ -270,5 +274,96 @@ export class DocumentsService {
       .toLowerCase()
       .replace(/[^a-z0-9]+/g, '-')
       .replace(/^-+|-+$/g, '');
+  }
+
+  /**
+   * Create document for specific organization
+   */
+  async createDocumentForOrganization(
+    createDocumentDto: CreateDocumentDto,
+    organizationId: string,
+    userId: string,
+  ): Promise<Document> {
+    // Check if user has permission to create documents in this organization
+    await this.checkOrganizationPermission(organizationId, userId, [
+      MemberRole.OWNER,
+      MemberRole.ADMIN,
+      MemberRole.EDITOR,
+    ]);
+
+    const user = await this.em.findOne(User, { id: userId });
+    const organization = await this.em.findOne(Organization, { id: organizationId });
+
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+    if (!organization) {
+      throw new NotFoundException('Organization not found');
+    }
+
+    const document = new Document();
+    document.title = createDocumentDto.title;
+    document.description = createDocumentDto.description;
+    document.content = createDocumentDto.content;
+    document.slug = this.generateSlug(createDocumentDto.title);
+    document.status = createDocumentDto.status || DocumentStatus.DRAFT;
+    document.author = user;
+    document.organization = organization;
+
+    await this.em.persistAndFlush(document);
+    return document;
+  }
+
+  /**
+   * Get documents for organization that user can access
+   */
+  async getOrganizationDocuments(organizationId: string, userId: string): Promise<Document[]> {
+    // Check if user is a member of the organization
+    await this.checkOrganizationPermission(organizationId, userId, [
+      MemberRole.OWNER,
+      MemberRole.ADMIN,
+      MemberRole.EDITOR,
+      MemberRole.VIEWER,
+    ]);
+
+    return this.documentRepository.find(
+      { organization: { id: organizationId } },
+      { 
+        populate: ['author', 'organization'],
+        orderBy: { updatedAt: 'DESC' }
+      }
+    );
+  }
+
+  /**
+   * Get user's organizations where they can create documents
+   */
+  async getUserWritableOrganizations(userId: string): Promise<OrganizationMember[]> {
+    return this.memberRepository.find({
+      user: { id: userId },
+      role: { $in: [MemberRole.OWNER, MemberRole.ADMIN, MemberRole.EDITOR] },
+      isActive: true,
+    }, {
+      populate: ['organization']
+    });
+  }
+
+  /**
+   * Check if user has required permission in organization
+   */
+  private async checkOrganizationPermission(
+    organizationId: string,
+    userId: string,
+    requiredRoles: MemberRole[],
+  ): Promise<void> {
+    const member = await this.memberRepository.findOne({
+      user: { id: userId },
+      organization: { id: organizationId },
+      isActive: true,
+    });
+
+    if (!member || !requiredRoles.includes(member.role)) {
+      throw new ForbiddenException('Insufficient permissions in organization');
+    }
   }
 }

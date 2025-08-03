@@ -196,6 +196,57 @@ export class DocumentsController {
   }
 
   /**
+   * Create document for specific organization
+   */
+  @Post('organization/:organizationId')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Create document for specific organization' })
+  @ApiResponse({ status: 201, description: 'Document created successfully' })
+  @ApiResponse({ status: 403, description: 'Insufficient permissions in organization' })
+  @ApiResponse({ status: 404, description: 'Organization not found' })
+  async createDocumentForOrganization(
+    @Param('organizationId') organizationId: string,
+    @Body() createDocumentDto: CreateDocumentDto,
+    @CurrentUser() user: User,
+  ) {
+    return this.documentsService.createDocumentForOrganization(
+      createDocumentDto,
+      organizationId,
+      user.id
+    );
+  }
+
+  /**
+   * Get documents for specific organization
+   */
+  @Get('organization/:organizationId')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Get documents for specific organization' })
+  @ApiResponse({ status: 200, description: 'Documents retrieved successfully' })
+  @ApiResponse({ status: 403, description: 'Insufficient permissions in organization' })
+  @ApiResponse({ status: 404, description: 'Organization not found' })
+  async getOrganizationDocuments(
+    @Param('organizationId') organizationId: string,
+    @CurrentUser() user: User,
+  ) {
+    return this.documentsService.getOrganizationDocuments(organizationId, user.id);
+  }
+
+  /**
+   * Get user's writable organizations
+   */
+  @Get('writable-organizations')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Get organizations where user can create documents' })
+  @ApiResponse({ status: 200, description: 'Organizations retrieved successfully' })
+  async getUserWritableOrganizations(@CurrentUser() user: User) {
+    return this.documentsService.getUserWritableOrganizations(user.id);
+  }
+
+  /**
    * Health check endpoint for documents module
    */
   @ApiOperation({ summary: 'Documents module health check' })
