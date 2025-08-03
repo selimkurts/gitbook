@@ -1,0 +1,76 @@
+version: '3.8'
+
+services:
+  # Database (PostgreSQL)
+  database:
+    image: postgres:15-alpine
+    container_name: gitbook-database
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: docflow
+      POSTGRES_USER: docflow
+      POSTGRES_PASSWORD: docflow123
+    volumes:
+      - docflow-postgres-data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    networks:
+      - docflow-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U docflow -d docflow"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Frontend (Next.js)
+  frontend:
+    build:
+      context: ./client
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - NEXT_PUBLIC_API_URL=http://localhost:3001
+    depends_on:
+      - backend
+    networks:
+      - docflow-network
+
+  # Backend (NestJS)
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    ports:
+      - "3001:3001"
+    environment:
+      - NODE_ENV=production
+      - PORT=3001
+      - DB_HOST=database
+      - DB_PORT=5432
+      - DB_USER=docflow
+      - DB_PASSWORD=docflow123
+      - DB_NAME=docflow
+      - JWT_SECRET=docflow-super-secret-jwt-key-change-in-production
+      - JWT_EXPIRES_IN=24h
+      - FRONTEND_URL=http://localhost:3000
+    depends_on:
+      database:
+        condition: service_healthy
+    networks:
+      - docflow-network
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').request('http://localhost:3001/health', (res) => { process.exit(res.statusCode === 200 ? 0 : 1) }).end()"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+volumes:
+  docflow-postgres-data:
+    driver: local
+
+networks:
+  docflow-network:
+    driver: bridge

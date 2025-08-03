@@ -1,0 +1,79 @@
+version: '3.8'
+
+services:
+  # Database (PostgreSQL) - Development
+  database-dev:
+    image: postgres:15-alpine
+    container_name: gitbook-database-dev
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: docflow_dev
+      POSTGRES_USER: docflow
+      POSTGRES_PASSWORD: docflow123
+    volumes:
+      - docflow-postgres-dev-data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    networks:
+      - docflow-dev-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U docflow -d docflow_dev"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Backend (NestJS) - Development mode
+  backend-dev:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.dev
+    ports:
+      - "3001:3001"
+    environment:
+      - NODE_ENV=development
+      - PORT=3001
+      - DB_HOST=database-dev
+      - DB_PORT=5432
+      - DB_USER=docflow
+      - DB_PASSWORD=docflow123
+      - DB_NAME=docflow_dev
+      - JWT_SECRET=docflow-dev-secret-key
+      - JWT_EXPIRES_IN=24h
+      - FRONTEND_URL=http://localhost:3000
+    volumes:
+      - ./backend:/app
+      - /app/node_modules
+    depends_on:
+      database-dev:
+        condition: service_healthy
+    networks:
+      - docflow-dev-network
+    command: npm run start:dev
+
+  # Frontend (Next.js) - Development mode
+  frontend-dev:
+    build:
+      context: ./client
+      dockerfile: Dockerfile.dev
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=development
+      - NEXT_PUBLIC_API_URL=http://localhost:3001
+    volumes:
+      - ./client:/app
+      - /app/node_modules
+      - /app/.next
+    networks:
+      - docflow-dev-network
+    depends_on:
+      - backend-dev
+    command: npm run dev
+
+volumes:
+  docflow-postgres-dev-data:
+    driver: local
+
+networks:
+  docflow-dev-network:
+    driver: bridge

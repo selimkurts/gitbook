@@ -1,0 +1,221 @@
+## Development Standards & Best Practices
+
+This comprehensive guide outlines best practices, conventions, and standards for development with modern web technologies including **ReactJS, NextJS, Redux, TypeScript, JavaScript, HTML, CSS**, and UI frameworks.
+
+---
+
+### 🧠 Development Philosophy
+
+* Write clean, maintainable, and scalable code
+* Follow **SOLID** principles
+* Prefer **functional** and **declarative** programming patterns over imperative
+* Emphasize **type safety** and static analysis
+* Practice **component-driven development**
+
+---
+
+### 🛠️ Code Implementation Guidelines
+
+**Planning Phase**
+
+* Begin with step-by-step planning
+* Write detailed pseudocode before implementation
+* Document component architecture and data flow
+* Consider edge cases and error scenarios
+
+**Code Style**
+
+* Use **tabs** for indentation
+* Use **single quotes** for strings (except to avoid escaping)
+* **Omit semicolons** (unless required for disambiguation)
+* Eliminate **unused variables**
+* Add space **after keywords**
+* Add space **before function declaration parentheses**
+* Always use **strict equality (`===`)**
+* Space **infix operators**
+* Add space **after commas**
+* Keep **`else` statements on the same line** as closing braces
+* Use **curly braces** for multi-line `if` statements
+* Always handle **error parameters in callbacks**
+* Limit line length to **80 characters**
+* Use **trailing commas** in multiline object/array literals
+
+---
+
+### 🔤 Naming Conventions
+
+**General Rules**
+
+* **PascalCase**: Components, Type Definitions, Interfaces
+* **kebab-case**: Directory names, File names
+* **camelCase**: Variables, Functions, Methods, Hooks, Properties, Props
+* **UPPERCASE**: Environment variables, Constants, Global configurations
+
+**Specific Patterns**
+
+* Prefix event handlers with `'handle'`: `handleClick`, `handleSubmit`
+* Prefix booleans with verbs: `isLoading`, `hasError`, `canSubmit`
+* Prefix custom hooks with `'use'`: `useAuth`, `useForm`
+* Use complete words over abbreviations, except: `err`, `req`, `res`, `props`, `ref`
+
+---
+
+### ⚛️ React Best Practices
+
+**Component Architecture**
+
+* Use **functional components** with TypeScript interfaces
+* Define components using the `function` keyword
+* Extract logic into **custom hooks**
+* Apply **component composition**
+* Use `React.memo()` strategically
+* Implement proper **`useEffect` cleanup**
+
+**Performance Optimization**
+
+* Use `useCallback` to memoize callbacks
+* Use `useMemo` for expensive computations
+* Avoid inline functions in JSX
+* Apply **code splitting** with dynamic imports
+* Use **proper `key` props** in lists (avoid index keys)
+
+---
+
+### ⚙️ Next.js Best Practices
+
+**Core Concepts**
+
+* Use **Pages Router**
+* Manage metadata correctly
+* Use proper **caching strategies**
+* Use **error boundaries** for error handling
+
+**Components & Features**
+
+* Use built-in components: `Image`, `Link`, `Script`, `Head`
+* Implement loading states
+* Use proper **data fetching methods**
+
+**Server Components**
+
+* Prefer Server Components
+* Use query parameters for fetching & server state
+* Use `'use client'` only when needed: event listeners, browser APIs, Zustand, etc.
+
+---
+
+### 🧾 TypeScript Implementation
+
+* Enable **strict mode**
+* Define **clear interfaces** for props, state, Redux state
+* Use **type guards** to handle `undefined` or `null`
+* Apply **generics** to functions/actions/slices
+* Use **utility types**: `Partial`, `Pick`, `Omit`
+* Prefer `interface` over `type` for extendable objects
+* Use **mapped types** for dynamic structures
+
+---
+
+### 🎨 UI and Styling
+
+**Component Libraries**
+
+* Use **Shadcn UI** for accessibility and consistency
+* Integrate **Radix UI primitives** for flexible components
+
+**Styling Guidelines**
+
+* Use **Tailwind CSS** (utility-first)
+* Apply **mobile-first, responsive design**
+* Implement **dark mode** using CSS variables or Tailwind config
+* Ensure **contrast ratios** meet accessibility standards
+* Maintain consistent **spacing**
+* Use **CSS variables** for theming and scalability
+
+---
+
+### 🧠 State Management
+
+**Local State**
+
+* Use `useState`, `useReducer`, `useContext`
+* Initialize state properly
+
+**Global State**
+
+* Use **Zustand** for simplicity
+* Normalize structure (avoid deep nesting)
+* Use **selectors**
+* Avoid large monolithic stores; separate by feature
+
+---
+
+### ❌ Error Handling & Validation
+
+**Form Validation**
+
+* Use **Zod** for schema validation
+* Display user-friendly error messages
+* Use **React Hook Form** for form handling
+
+**Error Boundaries**
+
+* Catch and display graceful errors in React trees
+* Log to external services (e.g., **Sentry**)
+* Provide fallback UIs
+
+---
+
+### 🧪 Testing
+
+**Unit Testing**
+
+* Use **Jest** + **React Testing Library**
+* Follow **Arrange–Act–Assert**
+* Mock API calls and external dependencies
+
+**Integration Testing**
+
+* Focus on **user workflows**
+* Setup/teardown test environments cleanly
+* Use **snapshot testing** sparingly
+* Use `screen` utilities for readability
+
+---
+
+### ♿ Accessibility (a11y)
+
+* Use **semantic HTML**
+* Add **ARIA attributes** where necessary
+* Ensure full **keyboard navigation**
+* Manage **focus order** properly
+* Maintain **accessible color contrast**
+* Follow heading hierarchy
+* Make all interactive elements accessible
+* Provide clear, descriptive **error messages**
+
+---
+
+### 🔒 Security
+
+* Sanitize inputs to prevent XSS
+* Use **DOMPurify** when rendering HTML
+* Implement proper authentication strategies
+
+---
+
+### 🌍 Internationalization (i18n)
+
+* Use **next-i18next**
+* Detect locale and implement RTL support
+* Format **dates, numbers, currencies** properly
+
+---
+
+### 📝 Documentation
+
+* Use **JSDoc**
+* Document all public APIs, functions, and components
+* Add examples where appropriate
+* Write full sentences with punctuation
+* Format using proper markdown: headings, code blocks, links, lists
